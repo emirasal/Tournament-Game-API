@@ -1,6 +1,6 @@
-package com.dreamgamescasestudy.rest.Controllers;
+package com.dreamgamescasestudy.rest.Controller;
 
-import com.dreamgamescasestudy.rest.Models.User;
+import com.dreamgamescasestudy.rest.Model.User;
 import com.dreamgamescasestudy.rest.Repo.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -14,19 +14,14 @@ public class UserController {
     @Autowired
     private UserRepo userRepository;
 
-    @GetMapping(value = "/")
-    public String getPage(){
-        return "Welcome";
-    }
-
     @GetMapping(value = "/users")
     public List<User> getUsers() {
         return userRepository.findAll();
     }
 
-    @PostMapping(value = "/user/create")
-    public User CreateUserRequest() {
-        User newUser = new User();
+    @PostMapping(value = "/user/create/{username}")
+    public User CreateUserRequest(@PathVariable String username) {
+        User newUser = new User(username);
         userRepository.save(newUser);
         return newUser;
     }
