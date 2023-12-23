@@ -4,7 +4,7 @@ import java.util.TreeSet;
 
 public class SortedCountrySet {
 
-    private TreeSet<Country> sortedCountries;
+    private final TreeSet<Country> sortedCountries;
     private static final String[] countries = {"Turkey", "United States", "United Kingdom", "France", "Germany"};
 
     public SortedCountrySet() {
@@ -15,9 +15,16 @@ public class SortedCountrySet {
         }
     }
 
-    public void increaseScore(String country) {
+    public void increaseScore(String countryName) {
         // First remove the country with that name and add it after increasing the score by 1
-        sortedCountries.
+        for (Country country : sortedCountries) {
+            if (country.getCountryName().equals(countryName)) {
+                sortedCountries.remove(country); // Removing the country
+                country.setTournamentScore(country.getTournamentScore() + 1); // Increasing the score
+                sortedCountries.add(country); // Inserting the country with updated score
+                break;
+            }
+        }
     }
 
     public TreeSet<Country> getSortedCountries() {

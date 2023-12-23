@@ -1,18 +1,17 @@
 package com.dreamgamescasestudy.rest.Controller;
 
-import com.dreamgamescasestudy.rest.Model.User;
-import com.dreamgamescasestudy.rest.Repo.UserRepo;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.dreamgamescasestudy.rest.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 
 @RestController
+@RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserRepo userRepository;
+    private final UserRepository userRepository;
 
     @GetMapping(value = "/users")
     public List<User> getUsers() {

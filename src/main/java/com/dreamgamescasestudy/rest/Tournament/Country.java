@@ -2,12 +2,24 @@ package com.dreamgamescasestudy.rest.Tournament;
 
 public class Country implements Comparable<Country> {
 
-    private final String country;
+    private final String countryName;
     private int tournamentScore;
 
     public Country(String country) {
-        this.country = country;
+        this.countryName = country;
         this.tournamentScore = 0;
+    }
+
+    public String getCountryName() {
+        return countryName;
+    }
+
+    public int getTournamentScore() {
+        return tournamentScore;
+    }
+
+    public void setTournamentScore(int tournamentScore) {
+        this.tournamentScore = tournamentScore;
     }
 
     @Override

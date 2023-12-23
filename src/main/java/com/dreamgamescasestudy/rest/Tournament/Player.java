@@ -1,7 +1,5 @@
 package com.dreamgamescasestudy.rest.Tournament;
 
-import com.dreamgamescasestudy.rest.Model.User;
-
 public class Player implements Comparable<Player> {
 
     private final long userID;
@@ -16,12 +14,20 @@ public class Player implements Comparable<Player> {
         this.tournamentScore = 0;
     }
 
+    public long getUserID() {
+        return userID;
+    }
+
     public String getUsername() {
         return username;
     }
 
-    public int gettournamentScore() {
+    public int getTournamentScore() {
         return tournamentScore;
+    }
+
+    public void setTournamentScore(int tournamentScore) {
+        this.tournamentScore = tournamentScore;
     }
 
     @Override
