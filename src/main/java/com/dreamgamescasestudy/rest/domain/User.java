@@ -3,15 +3,19 @@ package com.dreamgamescasestudy.rest.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
+@Setter
 @Builder
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long userID;
 
     @Column
     private String username;
@@ -22,7 +26,7 @@ public class User {
 
     @Column
     @Builder.Default
-    private int coin = 5000;
+    private int coins = 5000;
 
     @Column
     @Enumerated(EnumType.STRING)
@@ -31,12 +35,8 @@ public class User {
     @Column
     private int pendingCoins;
 
-    public User(String username) {
-        this.username = username;
-    }
-
     public void updateFieldsForNewLevel(){
-        this.coin = getCoin() + 25;
+        this.coins = getCoins() + 25;
         this.level = getLevel() + 1;
     }
 }

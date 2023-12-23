@@ -10,7 +10,7 @@ public class CountryLeaderboard {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "tournament_id", referencedColumnName = "id")
+    @JoinColumn(name = "tournamentID")
     private Tournament tournament;
 
     @Column

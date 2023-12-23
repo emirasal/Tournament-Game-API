@@ -3,7 +3,11 @@ package com.dreamgamescasestudy.rest.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 
+
+@Getter
 @Entity
 @Builder
 @NoArgsConstructor
@@ -12,12 +16,10 @@ public class Tournament {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Getter
-    private Long id;
+    private Long tournamentID;
 
     @Column
     @Builder.Default
-    @Getter
     @Setter
     private TournamentState tournamentState = TournamentState.ACTIVE;
 
