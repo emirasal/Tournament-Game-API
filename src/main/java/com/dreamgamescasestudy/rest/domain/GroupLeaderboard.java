@@ -1,10 +1,14 @@
 package com.dreamgamescasestudy.rest.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 
+@Builder
 @Entity
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class GroupLeaderboard {
 
     @Id
@@ -25,6 +29,7 @@ public class GroupLeaderboard {
     private String username;
 
     @Column
-    private int userScore;
+    @Builder.Default
+    private int userScore = 0;
 
 }

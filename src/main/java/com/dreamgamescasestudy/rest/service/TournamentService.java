@@ -49,7 +49,35 @@ public class TournamentService {
 
     }
 
-    public List<GroupLeaderboardResponse> EnterTournament(Long userID){
+
+    private void formGroups(){
+        if (userQueue.size() >= 5) {
+            Map<Country, User> countryUserMap = new HashMap<>();
+
+            for (User currentUser : userQueue) {
+                if (countryUserMap.size() >= 5) {
+                    break; // Exiting if 5 unique countries are found
+                }
+
+                if (!countryUserMap.containsKey(currentUser.getCountry())) {
+                    countryUserMap.put(currentUser.getCountry(), currentUser);
+
+                }
+            }
+
+            if (countryUserMap.size() > 5) {
+                // Creating the tournament group
+                TournamentGroup newGroup = TournamentGroup.builder().build();
+                tournamentGroupRepository.save(newGroup);
+                for (User user : countryUserMap.values()) {
+                    // Creating 5 instance for groupLeaderboards with the same group
+                    groupLeaderboardRepository.save(GroupLeaderboard.builder().tournamentGroup(newGroup).username(user.getUsername()).user(user).build());
+                }
+            }
+        }
+    }
+
+    public List<GroupLeaderboard> EnterTournament(Long userID) throws InterruptedException {
 
         Optional<User> optionalUser = userRepository.findById(userID);
 
@@ -66,30 +94,18 @@ public class TournamentService {
             }
             user.setCoins(user.getCoins() - 1000);
 
+            userQueue.offer(user);
+            formGroups();
 
-            // Checking the last group for available slot
-            // If not form a new Group
-            Optional<TournamentGroup> OptionalLastGroup = tournamentGroupRepository.findTopByOrderByGroupIdDesc();
-            if (OptionalLastGroup.isPresent()) {
-                TournamentGroup lastGroup = OptionalLastGroup.get();
-                Long lastGroupID = lastGroup.getGroupID();
-
-                // We have the last group now find the users in that group
-                List<GroupLeaderboard> lastGroupUsers = groupLeaderboardRepository.findByGroupId(lastGroupID);
-
-                // Check if there exist a person with the same country in that group
-                for (GroupLeaderboard userInGroup : lastGroupUsers) {
-                    if (userInGroup.getUser().getCountry() == user.getCountry()) {
-                        // Cannot enter here so we will form a new group for that person
-
-                    }
-                    
-                }
-
-            } else {
-                // This is the first group
-
+            // Assume we've formed the group and search the person's group (2 seconds intervals)
+            Long groupID;
+            do {
+                Thread.sleep(2000);
+                groupID = groupLeaderboardRepository.findGroupIdByUserId(user.getUserID());
             }
+            while(groupID == null);
+
+            return groupLeaderboardRepository.findByGroupId(groupID);
 
         }
         // User does not exist!
