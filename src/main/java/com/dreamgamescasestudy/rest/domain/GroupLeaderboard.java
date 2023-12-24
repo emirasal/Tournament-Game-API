@@ -13,20 +13,17 @@ public class GroupLeaderboard {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long leaderboard_id;
+    private Long leaderboardId;
 
     @ManyToOne
-    @JoinColumn(name = "groupID")
-    private TournamentGroup tournamentGroup;
-
-
-    @ManyToOne
-    @JoinColumn(name = "userID")
+    @JoinColumn(name = "user_id")
     private User user;
 
 
-    @Column
-    private String username;
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private TournamentGroup tournamentGroup;
+
 
     @Column
     @Builder.Default

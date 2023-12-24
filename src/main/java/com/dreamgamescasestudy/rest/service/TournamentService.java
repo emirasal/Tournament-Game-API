@@ -2,19 +2,27 @@ package com.dreamgamescasestudy.rest.service;
 
 import com.dreamgamescasestudy.rest.domain.*;
 import com.dreamgamescasestudy.rest.repository.*;
-import com.dreamgamescasestudy.rest.web.response.GroupLeaderboardResponse;
+import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Sort;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+
 import java.util.*;
+
+import org.slf4j.Logger;
+
+
+
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+
 public class TournamentService {
 
     private final TournamentRepository tournamentRepository;
@@ -25,12 +33,15 @@ public class TournamentService {
 
     private final UserRepository userRepository;
 
+    Tournament currentTournament;
     private Queue<User> userQueue; // For matching the users to a group
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
+
+    //@Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
+    @PostConstruct
     public void startNewTournament() {
-        Tournament newTournament = new Tournament();
-        tournamentRepository.save(newTournament);
+        currentTournament = new Tournament();
+        tournamentRepository.save(currentTournament);
 
         userQueue = new LinkedList<>();
     }
@@ -51,10 +62,11 @@ public class TournamentService {
 
 
     private void formGroups(){
-        if (userQueue.size() >= 5) {
-            Map<Country, User> countryUserMap = new HashMap<>();
 
-            for (User currentUser : userQueue) {
+        if (userQueue.size() >= 5) {
+            Map<Country, User> countryUserMap = new HashMap<>(); // To store the unique Country / User pairs
+
+            for (User  currentUser : userQueue){
                 if (countryUserMap.size() >= 5) {
                     break; // Exiting if 5 unique countries are found
                 }
@@ -65,13 +77,15 @@ public class TournamentService {
                 }
             }
 
-            if (countryUserMap.size() > 5) {
+            if (countryUserMap.size() == 5) { // We can form the group
                 // Creating the tournament group
-                TournamentGroup newGroup = TournamentGroup.builder().build();
+                TournamentGroup newGroup = TournamentGroup.builder().tournament(currentTournament).build();
                 tournamentGroupRepository.save(newGroup);
                 for (User user : countryUserMap.values()) {
-                    // Creating 5 instance for groupLeaderboards with the same group
-                    groupLeaderboardRepository.save(GroupLeaderboard.builder().tournamentGroup(newGroup).username(user.getUsername()).user(user).build());
+                    // Creating 5 instance for groupLeaderboards with having the same group
+                    GroupLeaderboard newParticipant = GroupLeaderboard.builder().tournamentGroup(newGroup).user(user).build();
+                    groupLeaderboardRepository.save(newParticipant);
+
                 }
             }
         }
@@ -81,76 +95,114 @@ public class TournamentService {
 
         Optional<User> optionalUser = userRepository.findById(userID);
 
+
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-            // Checking if user cannot enter
+
+            // Checking if user already entered
+            Optional<GroupLeaderboard> optionalGroupLeaderboard = Optional.ofNullable(groupLeaderboardRepository.findByUser(user));
+            if (optionalGroupLeaderboard.isPresent()) {
+                return null; // user already joined
+            }
+
             if (user.getPendingCoins() > 0 && user.getLevel() < 20) {
-                // not enough level or previous reward not claimed
-                return null;
+                return null; // not enough level or previous reward not claimed
             }
             if (user.getCoins() < 1000) {
-                // not enough money to enter
-                return null;
+                return null; // not enough money to enter
             }
             user.setCoins(user.getCoins() - 1000);
 
             userQueue.offer(user);
             formGroups();
 
-            // Assume we've formed the group and search the person's group (2 seconds intervals)
-            Long groupID;
-            do {
-                Thread.sleep(2000);
-                groupID = groupLeaderboardRepository.findGroupIdByUserId(user.getUserID());
+            // We search the person's group until found (2 seconds intervals)
+            GroupLeaderboard leaderboardInstance = null;
+            while (leaderboardInstance == null) {
+                Thread.sleep(1000);
+
+                leaderboardInstance = groupLeaderboardRepository.findByUser(user);
+
+                Logger logger = LoggerFactory.getLogger(this.getClass());
+                logger.info("hello");
+
             }
-            while(groupID == null);
 
-            return groupLeaderboardRepository.findByGroupId(groupID);
-
+            return GetGroupLeaderboard(leaderboardInstance.getTournamentGroup().getGroupID());
         }
-        // User does not exist!
-        return null;
+
+        return null; // User does not exist or already in the tournament!
     }
 
     public int GetGroupRank(Long userID, Long tournamentID){
-        // Getting the groupIDs of that tournament
-        List<Long> groupIDs = tournamentGroupRepository.findGroupIdsByTournamentId(tournamentID);
+        // Finding the tournament by the id
+        Optional<Tournament> optionalTournament = tournamentRepository.findById(tournamentID);
+        // Finding the user by the id
+        Optional<User> optionalUser = userRepository.findById(userID);
 
-        // Finding the groupID matching that user
-        Long groupID = groupLeaderboardRepository.findGroupIdByUserIdAndGroupId(userID, tournamentID);
+        if (optionalTournament.isPresent() && optionalUser.isPresent()) {
+            Tournament tournament = optionalTournament.get();
+            User user = optionalUser.get();
 
-        // Finding the users for that groupID (5 users)
-        List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByGroupId(groupID);
+            // Getting the groups of that tournament
+            List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(tournament);
 
-        // Sorting the list
-        leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
+            // Finding the correct group alongside a list of groups (pair of user & group match)
+            TournamentGroup group = groupLeaderboardRepository.findByUserAndTournamentGroupIn(user, groups).getTournamentGroup();
 
-        // Finding the user's rank
-        int rank = 0;
+            // Finding the users for that groupID (5 users)
+            List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByTournamentGroup(group);
 
-        for (int i = 0; i < leaderboard.size(); i++) {
-            if (leaderboard.get(i).getUser().getUserID().equals(userID)) {
-                rank = i + 1; // Adding 1 to start rank from 1 instead of 0
-                break;
+            // Sorting the list
+            leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
+
+            // Finding the user's rank
+            int rank = 0;
+
+            for (int i = 0; i < leaderboard.size(); i++) {
+                if (leaderboard.get(i).getUser().getUserID().equals(userID)) {
+                    rank = i + 1; // Adding 1 to start rank from 1 instead of 0
+                    break;
+                }
             }
+            return rank;
         }
-
-        return rank;
+        // tournamentID or userID is not valid
+       return -1;
     }
     
     
     public List<GroupLeaderboard> GetGroupLeaderboard(Long groupID){
+        Optional<TournamentGroup> optionalGroup = tournamentGroupRepository.findById(groupID);
 
-        List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByGroupId(groupID);
+        if (optionalGroup.isPresent()) {
+            TournamentGroup group = optionalGroup.get();
+            List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByTournamentGroup(group);
 
-        // Sorting the list
-        leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
+            // Sorting the list
+            leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
 
-        return leaderboard;
+            return leaderboard;
+        }
+        // No such group
+        return null;
     }
 
     public List<CountryLeaderboard> GetCountryLeaderboard(Long tournamentID) {
-        return countryLeaderboardRepository.findByTournamentTournamentId(tournamentID);
+
+        Optional<Tournament> optionalTournament = tournamentRepository.findById(tournamentID);
+
+        if(optionalTournament.isPresent()) {
+            Tournament tournament = optionalTournament.get();
+            List<CountryLeaderboard> countryLeaderboard = countryLeaderboardRepository.findByTournament(tournament);
+
+            // Sorting in terms of score
+            countryLeaderboard.sort(Comparator.comparing(CountryLeaderboard::getScore).reversed());
+
+            return countryLeaderboard;
+        }
+        // Tournament does not exist
+        return null;
     }
 
 }

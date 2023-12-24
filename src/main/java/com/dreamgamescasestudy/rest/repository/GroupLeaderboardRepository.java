@@ -1,17 +1,19 @@
 package com.dreamgamescasestudy.rest.repository;
 
 import com.dreamgamescasestudy.rest.domain.GroupLeaderboard;
+import com.dreamgamescasestudy.rest.domain.TournamentGroup;
+import com.dreamgamescasestudy.rest.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
 public interface GroupLeaderboardRepository extends JpaRepository<GroupLeaderboard, Long> {
 
-    // Finding groupID, userID pair and return that groupID
-    Long findGroupIdByUserIdAndGroupId(Long userId, Long groupId);
 
-    List<GroupLeaderboard> findByGroupId(Long groupId);
+    GroupLeaderboard findByUserAndTournamentGroupIn(User user, List<TournamentGroup> groups);
 
-    Long findGroupIdByUserId(Long userId);
+    List<GroupLeaderboard> findByTournamentGroup(TournamentGroup tournamentGroup);
+
+    GroupLeaderboard findByUser(User user);
 
 }

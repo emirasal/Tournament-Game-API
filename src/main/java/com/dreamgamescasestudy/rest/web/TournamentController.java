@@ -15,7 +15,7 @@ public class TournamentController {
 
     private final TournamentService tournamentService;
 
-    @PutMapping("/enter-tournament/{userID}")
+    @PostMapping("/enter-tournament/{userID}")
     public List<GroupLeaderboard> EnterTournamentRequest(@PathVariable Long userID) throws InterruptedException {
         return tournamentService.EnterTournament(userID);
     }

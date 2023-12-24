@@ -21,11 +21,7 @@ public class TournamentGroup {
     private Long groupID;
 
     @ManyToOne
-    @JoinColumn(name = "tournamentID")
+    @JoinColumn(name = "tournament")
     private Tournament tournament; // Reference to Tournament
-
-    @Column
-    @Builder.Default
-    boolean playing = false;
 
 }

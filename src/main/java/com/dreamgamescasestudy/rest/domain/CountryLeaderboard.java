@@ -1,23 +1,25 @@
 package com.dreamgamescasestudy.rest.domain;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 
 @Entity
+@Getter
 public class CountryLeaderboard {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long leaderboardId;
 
     @ManyToOne
-    @JoinColumn(name = "tournamentID")
+    @JoinColumn(name = "tournament")
     private Tournament tournament;
 
     @Column
-    private String country;
+    private Country country;
 
     @Column
-    private int tournamentScore;
+    private int score;
 
 
 }
