@@ -17,7 +17,16 @@ public class TournamentController {
 
     @PostMapping("/enter-tournament/{userID}")
     public List<GroupLeaderboard> EnterTournamentRequest(@PathVariable Long userID) throws InterruptedException {
-        return tournamentService.EnterTournament(userID);
+
+        tournamentService.enterTournament(userID);
+
+        List<GroupLeaderboard> response = tournamentService.checkGroupLeaderboard(userID);
+        // keep checking until user is matched with a group
+        while (response == null) {
+            Thread.sleep(2000);
+            response = tournamentService.checkGroupLeaderboard(userID);
+        }
+        return response;
     }
 
     @GetMapping("/get-rank/{userID}")

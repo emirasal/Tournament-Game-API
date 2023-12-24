@@ -5,9 +5,10 @@ import com.dreamgamescasestudy.rest.repository.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,6 @@ import org.slf4j.Logger;
 @Service
 @Transactional
 @RequiredArgsConstructor
-
 public class TournamentService {
 
     private final TournamentRepository tournamentRepository;
@@ -60,9 +60,7 @@ public class TournamentService {
 
     }
 
-
     private void formGroups(){
-
         if (userQueue.size() >= 5) {
             Map<Country, User> countryUserMap = new HashMap<>(); // To store the unique Country / User pairs
 
@@ -84,6 +82,7 @@ public class TournamentService {
                 for (User user : countryUserMap.values()) {
                     // Creating 5 instance for groupLeaderboards with having the same group
                     GroupLeaderboard newParticipant = GroupLeaderboard.builder().tournamentGroup(newGroup).user(user).build();
+                    userQueue.remove(user);
                     groupLeaderboardRepository.save(newParticipant);
 
                 }
@@ -91,47 +90,41 @@ public class TournamentService {
         }
     }
 
-    public List<GroupLeaderboard> EnterTournament(Long userID) throws InterruptedException {
-
+    public List<GroupLeaderboard> checkGroupLeaderboard(Long userID){
         Optional<User> optionalUser = userRepository.findById(userID);
 
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            Optional<GroupLeaderboard> optionalGroupLeaderboard = Optional.ofNullable(groupLeaderboardRepository.findByUser(user));
+
+            if (optionalGroupLeaderboard.isPresent()) {
+                GroupLeaderboard leaderboardInstance = optionalGroupLeaderboard.get();
+                return GetGroupLeaderboard(leaderboardInstance.getTournamentGroup().getGroupID());
+            }
+        }
+        return null;
+    }
+
+    public void enterTournament(Long userID) {
+
+        Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
-            // Checking if user already entered
-            Optional<GroupLeaderboard> optionalGroupLeaderboard = Optional.ofNullable(groupLeaderboardRepository.findByUser(user));
-            if (optionalGroupLeaderboard.isPresent()) {
-                return null; // user already joined
+            if (user.getPendingCoins() == 0) {
+                /*
+                if (user.getCoins() >= 1000) {
+                user.getLevel() >= 20
+                }
+                user.setCoins(user.getCoins() - 1000); */
+
+                userQueue.offer(user);
+                formGroups();
+
+                // Leaderboard will be returned from the checkGroupLeaderboard method
             }
-
-            if (user.getPendingCoins() > 0 && user.getLevel() < 20) {
-                return null; // not enough level or previous reward not claimed
-            }
-            if (user.getCoins() < 1000) {
-                return null; // not enough money to enter
-            }
-            user.setCoins(user.getCoins() - 1000);
-
-            userQueue.offer(user);
-            formGroups();
-
-            // We search the person's group until found (2 seconds intervals)
-            GroupLeaderboard leaderboardInstance = null;
-            while (leaderboardInstance == null) {
-                Thread.sleep(1000);
-
-                leaderboardInstance = groupLeaderboardRepository.findByUser(user);
-
-                Logger logger = LoggerFactory.getLogger(this.getClass());
-                logger.info("hello");
-
-            }
-
-            return GetGroupLeaderboard(leaderboardInstance.getTournamentGroup().getGroupID());
         }
-
-        return null; // User does not exist or already in the tournament!
     }
 
     public int GetGroupRank(Long userID, Long tournamentID){
