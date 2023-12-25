@@ -8,10 +8,8 @@ import lombok.Getter;
 @Data
 @Getter
 @AllArgsConstructor
-public class GroupLeaderboardResponse {
+public class CountryLeaderboardResponse {
 
-    private final Long userID;
-    private final String username;
     private final Country country;
     private final int score;
 }

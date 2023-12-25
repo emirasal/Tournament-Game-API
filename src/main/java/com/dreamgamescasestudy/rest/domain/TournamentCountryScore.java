@@ -1,15 +1,19 @@
 package com.dreamgamescasestudy.rest.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 
 @Entity
 @Getter
-public class CountryLeaderboard {
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class TournamentCountryScore {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long leaderboardId;
+    private Long tournamentCountryId;
 
     @ManyToOne
     @JoinColumn(name = "tournament")
@@ -19,7 +23,7 @@ public class CountryLeaderboard {
     private Country country;
 
     @Column
-    private int score;
-
+    @Builder.Default
+    private int score = 0;
 
 }

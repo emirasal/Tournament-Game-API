@@ -9,11 +9,11 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class GroupLeaderboard {
+public class TournamentUserScore {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long leaderboardId;
+    private Long tournamentUserId;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -27,6 +27,6 @@ public class GroupLeaderboard {
 
     @Column
     @Builder.Default
-    private int userScore = 0;
+    private int score = 0;
 
 }

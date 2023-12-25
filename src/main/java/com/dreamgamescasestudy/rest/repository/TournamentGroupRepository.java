@@ -9,5 +9,4 @@ import java.util.Optional;
 
 public interface TournamentGroupRepository extends JpaRepository<TournamentGroup, Long> {
     List<TournamentGroup> findByTournament(Tournament tournament);
-
 }

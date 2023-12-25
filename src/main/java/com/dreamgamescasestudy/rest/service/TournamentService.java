@@ -1,23 +1,16 @@
 package com.dreamgamescasestudy.rest.service;
 
 import com.dreamgamescasestudy.rest.domain.*;
+import com.dreamgamescasestudy.rest.domain.TournamentUserScore;
 import com.dreamgamescasestudy.rest.repository.*;
 import jakarta.annotation.PostConstruct;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 
 import java.util.*;
-
-import org.slf4j.Logger;
-
-
 
 
 @Service
@@ -28,8 +21,8 @@ public class TournamentService {
     private final TournamentRepository tournamentRepository;
     private final TournamentGroupRepository tournamentGroupRepository;
 
-    private final CountryLeaderboardRepository countryLeaderboardRepository;
-    private final GroupLeaderboardRepository groupLeaderboardRepository;
+    private final TournamentCountryScoreRepository tournamentCountryScoreRepository;
+    private final TournamentUserScoreRepository tournamentUserScoreRepository;
 
     private final UserRepository userRepository;
 
@@ -50,14 +43,32 @@ public class TournamentService {
     public void closeTournament() {
         // Distributing coins to winners
 
-        // Optional<TournamentGroup> optionalTournamentGroup = tournamentGroupRepository.findById(UUID.randomUUID());
-        // optionalTournamentGroup.ifPresent(optionalTournamentGroup -> optionalTournamentGroup.getGroupLeaderboards());
+        // Finding all the groups of this tournament
+        List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(currentTournament);
 
+        // Distributing coins to tournament group winners
+        giveRewardsToGroups(groups);
 
-        Tournament activeTournament = tournamentRepository.findByTournamentState(TournamentState.ACTIVE);
-        activeTournament.setTournamentState(TournamentState.INACTIVE);
-        tournamentRepository.save(activeTournament);
+        // Updating tournament's status
+        currentTournament.setTournamentState(TournamentState.INACTIVE);
+        tournamentRepository.save(currentTournament);
+    }
 
+    private void giveRewardsToGroups (List<TournamentGroup> groups) {
+        for (TournamentGroup group : groups) {
+            List<TournamentUserScore> leaderboard = tournamentUserScoreRepository.findByTournamentGroup(group);
+
+            // sorting by the score and to get first and second places
+            leaderboard.sort(Comparator.comparingInt(TournamentUserScore::getScore).reversed());
+
+            User first = leaderboard.get(0).getUser();
+            first.setPendingCoins(1000);
+            userRepository.save(first);
+
+            User second = leaderboard.get(1).getUser();
+            second.setPendingCoins(5000);
+            userRepository.save(second);
+        }
     }
 
     private void formGroups(){
@@ -68,10 +79,8 @@ public class TournamentService {
                 if (countryUserMap.size() >= 5) {
                     break; // Exiting if 5 unique countries are found
                 }
-
                 if (!countryUserMap.containsKey(currentUser.getCountry())) {
                     countryUserMap.put(currentUser.getCountry(), currentUser);
-
                 }
             }
 
@@ -81,25 +90,33 @@ public class TournamentService {
                 tournamentGroupRepository.save(newGroup);
                 for (User user : countryUserMap.values()) {
                     // Creating 5 instance for groupLeaderboards with having the same group
-                    GroupLeaderboard newParticipant = GroupLeaderboard.builder().tournamentGroup(newGroup).user(user).build();
-                    userQueue.remove(user);
-                    groupLeaderboardRepository.save(newParticipant);
+                    TournamentUserScore newParticipant = TournamentUserScore.builder().tournamentGroup(newGroup).user(user).build();
+                    tournamentUserScoreRepository.save(newParticipant);
 
+                    userQueue.remove(user);
+
+                    // We also add this person's country added to country scores
+                    TournamentCountryScore newCountryInstance = TournamentCountryScore.builder().country(user.getCountry()).tournament(currentTournament).build();
+                    tournamentCountryScoreRepository.save(newCountryInstance);
                 }
             }
         }
     }
 
-    public List<GroupLeaderboard> checkGroupLeaderboard(Long userID){
+    public List<TournamentUserScore> checkUserScoresWithUserId(Long userID){
         Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
-            Optional<GroupLeaderboard> optionalGroupLeaderboard = Optional.ofNullable(groupLeaderboardRepository.findByUser(user));
 
-            if (optionalGroupLeaderboard.isPresent()) {
-                GroupLeaderboard leaderboardInstance = optionalGroupLeaderboard.get();
-                return GetGroupLeaderboard(leaderboardInstance.getTournamentGroup().getGroupID());
+            // Finding the groups of the current tournament
+            List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(currentTournament);
+
+            // Finding the correct tournamentUserScore instance (pair of user, group)
+            TournamentUserScore tournamentUserScore = tournamentUserScoreRepository.findByUserAndTournamentGroupIn(user, groups);
+
+            if (tournamentUserScore != null) {
+                return getGroupLeaderboard(tournamentUserScore.getTournamentGroup().getGroupID());
             }
         }
         return null;
@@ -127,7 +144,7 @@ public class TournamentService {
         }
     }
 
-    public int GetGroupRank(Long userID, Long tournamentID){
+    public int getGroupRank(Long userID, Long tournamentID){
         // Finding the tournament by the id
         Optional<Tournament> optionalTournament = tournamentRepository.findById(tournamentID);
         // Finding the user by the id
@@ -141,13 +158,13 @@ public class TournamentService {
             List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(tournament);
 
             // Finding the correct group alongside a list of groups (pair of user & group match)
-            TournamentGroup group = groupLeaderboardRepository.findByUserAndTournamentGroupIn(user, groups).getTournamentGroup();
+            TournamentGroup group = tournamentUserScoreRepository.findByUserAndTournamentGroupIn(user, groups).getTournamentGroup();
 
             // Finding the users for that groupID (5 users)
-            List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByTournamentGroup(group);
+            List<TournamentUserScore> leaderboard = tournamentUserScoreRepository.findByTournamentGroup(group);
 
             // Sorting the list
-            leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
+            leaderboard.sort(Comparator.comparingInt(TournamentUserScore::getScore).reversed());
 
             // Finding the user's rank
             int rank = 0;
@@ -165,15 +182,15 @@ public class TournamentService {
     }
     
     
-    public List<GroupLeaderboard> GetGroupLeaderboard(Long groupID){
+    public List<TournamentUserScore> getGroupLeaderboard(Long groupID){
         Optional<TournamentGroup> optionalGroup = tournamentGroupRepository.findById(groupID);
 
         if (optionalGroup.isPresent()) {
             TournamentGroup group = optionalGroup.get();
-            List<GroupLeaderboard> leaderboard = groupLeaderboardRepository.findByTournamentGroup(group);
+            List<TournamentUserScore> leaderboard = tournamentUserScoreRepository.findByTournamentGroup(group);
 
             // Sorting the list
-            leaderboard.sort(Comparator.comparingInt(GroupLeaderboard::getUserScore).reversed());
+            leaderboard.sort(Comparator.comparingInt(TournamentUserScore::getScore).reversed());
 
             return leaderboard;
         }
@@ -181,21 +198,42 @@ public class TournamentService {
         return null;
     }
 
-    public List<CountryLeaderboard> GetCountryLeaderboard(Long tournamentID) {
+    public List<TournamentCountryScore> getCountryLeaderboard(Long tournamentID) {
 
         Optional<Tournament> optionalTournament = tournamentRepository.findById(tournamentID);
 
         if(optionalTournament.isPresent()) {
             Tournament tournament = optionalTournament.get();
-            List<CountryLeaderboard> countryLeaderboard = countryLeaderboardRepository.findByTournament(tournament);
+            List<TournamentCountryScore> tournamentCountryScores = tournamentCountryScoreRepository.findByTournament(tournament);
 
             // Sorting in terms of score
-            countryLeaderboard.sort(Comparator.comparing(CountryLeaderboard::getScore).reversed());
+            tournamentCountryScores.sort(Comparator.comparing(TournamentCountryScore::getScore).reversed());
 
-            return countryLeaderboard;
+            return tournamentCountryScores;
         }
         // Tournament does not exist
         return null;
     }
 
+    public void updateTournamentScore(long userID){
+        Optional<User> optionalUser = userRepository.findById(userID);
+
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+
+            // Finding the groups belonging to the current tournament
+            List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(currentTournament);
+
+            // Finding the row
+            TournamentUserScore tournamentUserScoreInstance = tournamentUserScoreRepository.findByUserAndTournamentGroupIn(user, groups);
+            tournamentUserScoreInstance.setScore(tournamentUserScoreInstance.getScore() + 1);
+            tournamentUserScoreRepository.save(tournamentUserScoreInstance);
+
+            // Also updating user's country's score
+            // Finding the correct (tournamentID, country match)
+            TournamentCountryScore tournamentCountryScoreInstance = tournamentCountryScoreRepository.findByTournamentAndCountry(currentTournament, user.getCountry());
+            tournamentCountryScoreInstance.setScore(tournamentCountryScoreInstance.getScore() + 1);
+            tournamentCountryScoreRepository.save(tournamentCountryScoreInstance);
+        }
+    }
 }
