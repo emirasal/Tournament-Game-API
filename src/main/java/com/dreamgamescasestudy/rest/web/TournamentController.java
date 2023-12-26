@@ -34,8 +34,6 @@ public class TournamentController {
         return UserScoresDataToResponse(userScores);
     }
 
-
-
     @GetMapping("/get-rank")
     public int GetGroupRankRequest(@RequestParam Long userID, @RequestParam Long tournamentID) {
 
