@@ -1,6 +1,5 @@
 package com.dreamgamescasestudy.rest.web;
 
-import com.dreamgamescasestudy.rest.domain.Country;
 import com.dreamgamescasestudy.rest.domain.TournamentCountryScore;
 import com.dreamgamescasestudy.rest.domain.TournamentUserScore;
 import com.dreamgamescasestudy.rest.domain.User;
@@ -35,23 +34,15 @@ public class TournamentController {
         return UserScoresDataToResponse(userScores);
     }
 
-    private List<GroupLeaderboardResponse> UserScoresDataToResponse(List<TournamentUserScore> userScores) {
-        List<GroupLeaderboardResponse> response = new ArrayList<>();
-        for (TournamentUserScore instance : userScores){
-            User userData = instance.getUser();
-            GroupLeaderboardResponse newElement = new GroupLeaderboardResponse(userData.getUserID(), userData.getUsername(), userData.getCountry(), instance.getScore());
-            response.add(newElement);
-        }
-        return response;
-    }
 
-    @GetMapping("/get-rank/{userID}")
+
+    @GetMapping("/get-rank")
     public int GetGroupRankRequest(@RequestParam Long userID, @RequestParam Long tournamentID) {
 
         return tournamentService.getGroupRank(userID, tournamentID);
     }
 
-    @GetMapping("/get-group-leaderboard")
+    @GetMapping("/group-leaderboard")
     public List<GroupLeaderboardResponse> GetGroupLeaderboardRequest(@RequestParam Long groupID){
 
         List<TournamentUserScore> leaderboardList =  tournamentService.getGroupLeaderboard((groupID));
@@ -60,7 +51,7 @@ public class TournamentController {
         return UserScoresDataToResponse(leaderboardList);
     }
 
-    @GetMapping("/get-country-leaderboard")
+    @GetMapping("/country-leaderboard")
     public List<CountryLeaderboardResponse> GetCountryLeaderboardRequest(@RequestParam Long tournamentID){
 
         List<TournamentCountryScore> leaderboard = tournamentService.getCountryLeaderboard(tournamentID);
@@ -78,6 +69,17 @@ public class TournamentController {
     @PutMapping("/update-tournament-score")
     public void UpdateTournamentScore(@RequestParam Long userID){
         tournamentService.updateTournamentScore(userID);
+    }
+
+
+    private List<GroupLeaderboardResponse> UserScoresDataToResponse(List<TournamentUserScore> userScores) {
+        List<GroupLeaderboardResponse> response = new ArrayList<>();
+        for (TournamentUserScore instance : userScores){
+            User userData = instance.getUser();
+            GroupLeaderboardResponse newElement = new GroupLeaderboardResponse(userData.getUserID(), userData.getUsername(), userData.getCountry(), instance.getScore());
+            response.add(newElement);
+        }
+        return response;
     }
 
 }
