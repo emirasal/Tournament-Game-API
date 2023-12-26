@@ -25,14 +25,13 @@ public class TournamentController {
 
         tournamentService.enterTournament(userID);
 
-        List<TournamentUserScore> userScores = tournamentService.checkUserScoresWithUserId(userID);
+        List<TournamentUserScore> userScores = tournamentService.getUserScoresWithUserId(userID);
         // keep checking until user is matched with a group
         while (userScores == null) {
             Thread.sleep(2000);
-            userScores = tournamentService.checkUserScoresWithUserId(userID);
+            userScores = tournamentService.getUserScoresWithUserId(userID);
         }
 
-        // Putting data into response class
         return UserScoresDataToResponse(userScores);
     }
 
@@ -47,7 +46,7 @@ public class TournamentController {
     }
 
     @GetMapping("/get-rank/{userID}")
-    public int GetGroupRankRequest(@PathVariable Long userID, @RequestParam Long tournamentID) {
+    public int GetGroupRankRequest(@RequestParam Long userID, @RequestParam Long tournamentID) {
 
         return tournamentService.getGroupRank(userID, tournamentID);
     }

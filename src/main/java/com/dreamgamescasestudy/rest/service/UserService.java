@@ -27,9 +27,7 @@ public class UserService {
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
-            user.setLevel(user.getLevel() + 1);
-            user.setCoins(user.getCoins() + 25);
-
+            user.updateFieldsForNewLevel();
             return userRepository.save(user);
         }
         // User does not exist!

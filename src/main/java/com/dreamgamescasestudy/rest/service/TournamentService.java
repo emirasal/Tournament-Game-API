@@ -5,6 +5,7 @@ import com.dreamgamescasestudy.rest.domain.TournamentUserScore;
 import com.dreamgamescasestudy.rest.repository.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import java.util.*;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Getter
 public class TournamentService {
 
     private final TournamentRepository tournamentRepository;
@@ -30,7 +32,7 @@ public class TournamentService {
     private Queue<User> userQueue; // For matching the users to a group
 
 
-    //@Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
+    @Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
     @PostConstruct
     public void startNewTournament() {
         currentTournament = new Tournament();
@@ -103,7 +105,7 @@ public class TournamentService {
         }
     }
 
-    public List<TournamentUserScore> checkUserScoresWithUserId(Long userID){
+    public List<TournamentUserScore> getUserScoresWithUserId(Long userID){
         Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
