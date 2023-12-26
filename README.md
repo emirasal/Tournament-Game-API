@@ -6,6 +6,10 @@ Used "Scheduled cron" to manage the tournament opening and closing times.
 
 When player enters a tournament. They're added to a queue and start searching for other people from diffirent countries. To check if they've found a group, a loop is running every 2 seconds and looking at the database (When there is not enough people response may wait several minutes).
 
+To sort the user or country scores for displaying the leaderboard. I used the Comparator class to create a custom sorting for class variable (userScore).
+
+I've created a seperate countryScore table so that I don't have to sum all the user scores every time it is called.
+
 I've created 5 database tables:
 ### User:
 + userID (primary key)
@@ -34,6 +38,3 @@ I've created 5 database tables:
 + tournament (foreign key)
 + country (enum)
 + score
-
- 
-![image]()
