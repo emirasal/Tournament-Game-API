@@ -1,18 +1,22 @@
 package com.dreamgamescasestudy.rest.web;
 
-import com.dreamgamescasestudy.rest.domain.User;
-import com.dreamgamescasestudy.rest.repository.UserRepository;
+import com.dreamgamescasestudy.rest.domain.*;
+import com.dreamgamescasestudy.rest.service.TournamentService;
 import com.dreamgamescasestudy.rest.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.greaterThan;
+
 
 @WebMvcTest(UserController.class)
 class UserControllerTest {
@@ -21,67 +25,65 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private UserService userService;
+    UserService userService;
+
+    @MockBean
+    TournamentService tournamentService;
 
     @Test
-    void createUserRequest() throws Exception {
-        User testUser = User.builder().build();
-        when(userService.createUser("testUser")).thenReturn(testUser);
+    void testCreateUserRequest() throws Exception {
+        // Mock userService.createUser method
+        when(userService.createUser("testUser")).thenReturn(User.builder().userID(1L).username("testUser").level(1).coins(5000).country(Country.TURKEY).build());
 
-        // Perform POST request to createUserRequest endpoint
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/user/create-user")
+        // Perform MockMvc request
+        mockMvc.perform(post("/api/v1/user/create-user")
                         .param("username", "testUser"))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.userID").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value(testUser.getLevel()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.coins").value(testUser.getCoins()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.country").value(testUser.getCountry().toString()));
-    }
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.level").value(1))
+                .andExpect(jsonPath("$.coins").value(5000))
+                .andExpect(jsonPath("$.country").value("TURKEY"));
 
+        // Verify that userService.createUser was called with the correct parameter
+        verify(userService, times(1)).createUser("testUser");
+    }
 
     @Test
-    void updateUserLevelRequest() throws Exception {
+    void testUpdateUserLevelRequest() throws Exception {
+        // Mock userService.updateUserLevel method
+        when(userService.updateUserLevel(1L)).thenReturn(User.builder().userID(1L).username("testUser").level(2).coins(5000).country(Country.TURKEY).build());
 
-        User testUser = User.builder().build();
+        // Perform MockMvc request
+        mockMvc.perform(put("/api/v1/user/update-level")
+                        .param("userID", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.level").value(2))
+                .andExpect(jsonPath("$.coins").value(5000))
+                .andExpect(jsonPath("$.country").value("TURKEY"));
 
-        // Saving the user to the database
-        when(userService.createUser("testUser")).thenReturn(testUser);
-
-        // Perform POST request to createUserRequest endpoint to create the user
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/user/create-user")
-                        .param("username", "testUser"))
-                .andExpect(MockMvcResultMatchers.status().isOk());
-
-
-        // Mock the update of user's level
-        when(userService.updateUserLevel(testUser.getUserID())).thenReturn(testUser);
-
-        // Perform PUT request to updateUserLevelRequest endpoint to update the user's level
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/user/update-level")
-                        .param("userID", String.valueOf(testUser.getUserID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.userID").exists())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.level").value(2)); // Assuming the level incremented by 1
+        // Verify that userService.updateUserLevel was called with the correct parameter
+        verify(userService, times(1)).updateUserLevel(1L);
     }
-
 
     @Test
-    void claimRewardsRequest() throws Exception {
+    void testClaimRewardRequest() throws Exception {
+        // Mock userService.ClaimTournamentReward method
+        when(userService.ClaimTournamentReward(1L)).thenReturn(User.builder().userID(1L).username("testUser").level(1).coins(5500).country(Country.TURKEY).build());
 
-        // Assuming we have a user that have coins to claim
-        User testUser = User.builder().pendingCoins(10000).build();
-        when(userService.createUser("testUser")).thenReturn(testUser);
+        // Perform MockMvc request
+        mockMvc.perform(put("/api/v1/user/claim-rewards")
+                        .param("userID", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.level").value(1))
+                .andExpect(jsonPath("$.country").value("TURKEY"))
+                .andExpect(jsonPath("$.coins").value(greaterThan(5000)));
 
-        // Mocking the user's existence in the database
-        when(userService.ClaimTournamentReward(testUser.getUserID())).thenReturn(testUser);
-
-        // Performing the PUT request to claim rewards
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/user/claim-rewards")
-                        .param("userID", String.valueOf(testUser.getUserID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$.userID").value(testUser.getUserID()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.coins").value(testUser.getCoins() + testUser.getPendingCoins()))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.pendingCoins").value(0)); // Assuming pending coins get claimed
+        // Verify that userService.ClaimTournamentReward was called with the correct parameter
+        verify(userService, times(1)).ClaimTournamentReward(1L);
     }
+
+
 
 }

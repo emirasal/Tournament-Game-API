@@ -35,7 +35,7 @@ public class TournamentService {
     @Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
     @PostConstruct
     public void startNewTournament() {
-        currentTournament = new Tournament();
+        currentTournament = Tournament.builder().build();
         tournamentRepository.save(currentTournament);
 
         userQueue = new LinkedList<>();
@@ -56,7 +56,7 @@ public class TournamentService {
         tournamentRepository.save(currentTournament);
     }
 
-    private void giveRewardsToGroups (List<TournamentGroup> groups) {
+    public void giveRewardsToGroups(List<TournamentGroup> groups) {
         for (TournamentGroup group : groups) {
             List<TournamentUserScore> leaderboard = tournamentUserScoreRepository.findByTournamentGroup(group);
 
@@ -64,7 +64,7 @@ public class TournamentService {
             leaderboard.sort(Comparator.comparingInt(TournamentUserScore::getScore).reversed());
 
             User first = leaderboard.get(0).getUser();
-            first.setPendingCoins(1000);
+            first.setPendingCoins(10000);
             userRepository.save(first);
 
             User second = leaderboard.get(1).getUser();

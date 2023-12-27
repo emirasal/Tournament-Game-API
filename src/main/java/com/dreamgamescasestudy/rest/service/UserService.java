@@ -16,7 +16,7 @@ public class UserService {
     private final UserRepository userRepository;
 
     public User createUser(String username){
-        User user = User.builder().country(Country.getRandomCountry()).username(username).build();
+        User user = User.builder().username(username).build();
         return userRepository.save(user);
     }
 

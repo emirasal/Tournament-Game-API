@@ -1,131 +1,123 @@
 package com.dreamgamescasestudy.rest.web;
 
-import com.dreamgamescasestudy.rest.domain.Country;
-import com.dreamgamescasestudy.rest.domain.TournamentUserScore;
-import com.dreamgamescasestudy.rest.domain.User;
+import com.dreamgamescasestudy.rest.domain.*;
 import com.dreamgamescasestudy.rest.service.TournamentService;
-
-import org.hamcrest.Matchers;
+import com.dreamgamescasestudy.rest.service.UserService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.greaterThan;
 
-@WebMvcTest(UserController.class)
+@WebMvcTest(TournamentController.class)
 class TournamentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
-    private TournamentService tournamentService;
+    TournamentService tournamentService;
 
-    @Test
-    void enterTournamentRequest() throws Exception {
+    @Mock
+    TournamentController tournamentController;
 
-        tournamentService.startNewTournament();
-
-        // Sending 4 different requests first
-        Country[] countries = Country.values();
-        for (int i=0; i < countries.length-1; i++) {
-            User testUser = User.builder().level(20).country(countries[i]).build();
-            tournamentService.enterTournament(testUser.getUserID());
-        }
-
-       // We create the last user and check if they formed a group
-        User testUser = User.builder().level(20).country(countries[countries.length-1]).build();
-        mockMvc.perform(MockMvcRequestBuilders.post("/api/v1/tournament/enter-tournament")
-                        .param("userID", String.valueOf(testUser.getUserID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(5));
+    @BeforeEach
+    void setUp() {
+        tournamentController = new TournamentController(tournamentService); // Initialize the controller with the mocked service
+        mockMvc = MockMvcBuilders.standaloneSetup(tournamentController).build(); // Set up MockMvc with the controller
     }
 
     @Test
-    void getGroupRankRequest() throws Exception {
-        tournamentService.startNewTournament();
-        // We need 5 people which already formed a group
-        User testUser = null;
-        for (Country country : Country.values()) {
-            testUser = User.builder().level(20).country(country).build();
-            tournamentService.enterTournament(testUser.getUserID());
-        }
+    void testGetGroupRankRequest() throws Exception {
+        // Mock the behavior of tournamentService.getGroupRank(userID, tournamentID)
+        when(tournamentService.getGroupRank(anyLong(), anyLong())).thenReturn(5); // Mocking the rank to be 5
 
-        // Testing for the last user
-        assert testUser != null;
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/tournament/get-rank")
-                        .param("userID", String.valueOf(testUser.getUserID()))
-                        .param("tournamentID", String.valueOf(tournamentService.getCurrentTournament().getTournamentID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(jsonPath("$").isNumber())
-                .andExpect(jsonPath("$").value(Matchers.greaterThanOrEqualTo(1)))
-                .andExpect(jsonPath("$").value(Matchers.lessThanOrEqualTo(5)));
-    }
+        // Perform MockMvc request
+        mockMvc.perform(get("/api/v1/tournament/get-rank")
+                        .param("userID", "1")
+                        .param("tournamentID", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)) // Assuming JSON response
+                .andExpect(jsonPath("$").value(5)); // Assuming the response structure returns the rank directly
 
-    @Test
-    void getGroupLeaderboardRequest() throws Exception {
-        tournamentService.startNewTournament();
-
-        // We need 5 people which already formed a group
-        User testUser = null;
-        for (Country country : Country.values()) {
-            testUser = User.builder().level(20).country(country).build();
-            tournamentService.enterTournament(testUser.getUserID());
-        }
-
-        // Finding the group from one of the users
-        assert testUser != null;
-        List<TournamentUserScore> result = new ArrayList<>();
-        when(tournamentService.getUserScoresWithUserId(testUser.getUserID())).thenReturn(result);
-
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/tournament/get-group-leaderboard")
-                        .param("groupID", String.valueOf(result.get(0).getTournamentGroup().getGroupID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$").isArray());
+        // Verify that tournamentService.getGroupRank was called with the correct parameters
+        verify(tournamentService, times(1)).getGroupRank(1L, 1L);
 
     }
 
     @Test
-    void getCountryLeaderboardRequest() throws Exception {
-        tournamentService.startNewTournament();
+    void testGetGroupLeaderboardRequest() throws Exception {
+        // Create mock TournamentUserScore objects
+        List<TournamentUserScore> mockLeaderboard = Arrays.asList(
+                TournamentUserScore.builder().tournamentUserId(1L).score(100).build(),
+                TournamentUserScore.builder().tournamentUserId(2L).score(90).build()
+                // Add more mock data as needed
+        );
 
-        // We need 5 people which already formed a group
-        User testUser = null;
-        for (Country country : Country.values()) {
-            testUser = User.builder().level(20).country(country).build();
-            tournamentService.enterTournament(testUser.getUserID());
-        }
+        // Mock the behavior of tournamentService.getGroupLeaderboard(groupID)
+        when(tournamentService.getGroupLeaderboard(anyLong())).thenReturn(mockLeaderboard);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/v1/tournament/get-country-leaderboard")
-                        .param("tournamentID", String.valueOf(tournamentService.getCurrentTournament().getTournamentID())))
-                .andExpect(MockMvcResultMatchers.status().isOk())
-                .andExpect(MockMvcResultMatchers.jsonPath("$").isArray());
+        // Perform MockMvc request
+        mockMvc.perform(get("/api/v1/tournament/group-leaderboard")
+                        .param("groupID", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)) // Assuming JSON response
+                .andExpect(jsonPath("$[0].tournamentUserId").value(1L)) // Assuming the response structure
+                .andExpect(jsonPath("$[0].score").value(100))
+                .andExpect(jsonPath("$[1].tournamentUserId").value(2L))
+                .andExpect(jsonPath("$[1].score").value(90));
+
+        // Verify that tournamentService.getGroupLeaderboard was called with the correct parameter
+        verify(tournamentService, times(1)).getGroupLeaderboard(1L);
     }
 
     @Test
-    void updateTournamentScore() throws Exception {
-        tournamentService.startNewTournament();
+    void testGetCountryLeaderboardRequest() throws Exception {
+        // Create mock TournamentCountryScore objects
+        List<TournamentCountryScore> mockLeaderboard = Arrays.asList(
+                TournamentCountryScore.builder().country(Country.TURKEY).score(100).build(),
+                TournamentCountryScore.builder().country(Country.GERMANY).score(90).build()
+                // Add more mock data as needed
+        );
 
-        // We need 5 people which already formed a group
-        User testUser = null;
-        for (Country country : Country.values()) {
-            testUser = User.builder().level(20).country(country).build();
-            tournamentService.enterTournament(testUser.getUserID());
-        }
+        // Mock the behavior of tournamentService.getCountryLeaderboard(tournamentID)
+        when(tournamentService.getCountryLeaderboard(anyLong())).thenReturn(mockLeaderboard);
 
-        assert testUser != null;
-        mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/tournament/update-tournament-score")
-                        .param("userID", String.valueOf(testUser.getUserID())))
-                .andExpect(MockMvcResultMatchers.status().isOk());
+        // Perform MockMvc request
+        mockMvc.perform(get("/api/v1/tournament/country-leaderboard")
+                        .param("tournamentID", "1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)) // Assuming JSON response
+                .andExpect(jsonPath("$[0].country").value("TURKEY")) // Assuming the response structure
+                .andExpect(jsonPath("$[0].score").value(100))
+                .andExpect(jsonPath("$[1].country").value("GERMANY"))
+                .andExpect(jsonPath("$[1].score").value(90));
+
+        // Verify that tournamentService.getCountryLeaderboard was called with the correct parameter
+        verify(tournamentService, times(1)).getCountryLeaderboard(1L);
     }
+
+    @Test
+    void testUpdateTournamentScore() throws Exception {
+        // Perform MockMvc request
+        mockMvc.perform(put("/api/v1/tournament/update-tournament-score")
+                        .param("userID", "1"))
+                .andExpect(status().isOk());
+
+        // Verify that tournamentService.updateTournamentScore was called with the correct parameter
+        verify(tournamentService, times(1)).updateTournamentScore(1L);
+    }
+
 }

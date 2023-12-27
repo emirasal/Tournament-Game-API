@@ -26,11 +26,13 @@ public class User {
     private int coins = 5000;
 
     @Column
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    private Country country;
+    private Country country = Country.getRandomCountry();
 
     @Column
     private int pendingCoins;
+
 
     public void updateFieldsForNewLevel(){
         this.coins = getCoins() + 25;

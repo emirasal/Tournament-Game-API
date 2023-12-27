@@ -43,10 +43,10 @@ public class TournamentController {
     @GetMapping("/group-leaderboard")
     public List<GroupLeaderboardResponse> GetGroupLeaderboardRequest(@RequestParam Long groupID){
 
-        List<TournamentUserScore> leaderboardList =  tournamentService.getGroupLeaderboard((groupID));
+        List<TournamentUserScore> leaderboard =  tournamentService.getGroupLeaderboard((groupID));
 
-        // Putting data into response class
-        return UserScoresDataToResponse(leaderboardList);
+        // Putting data into response class using custom function
+        return UserScoresDataToResponse(leaderboard);
     }
 
     @GetMapping("/country-leaderboard")
