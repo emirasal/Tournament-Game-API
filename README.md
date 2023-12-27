@@ -1,9 +1,10 @@
 # DreamGames-CaseStudy (Backend)
+
 I used Apache Maven for this case study alongside MySQL. 
 Organized the solution as: Controllers, Services, Repositories and Models.
 lombok builder is used for models.
 Used "Scheduled cron" to manage the tournament opening and closing times.
---------------
+__________
 
 I've added an extra field to User table (pendingCoins) to keep track if the user can enter a tournament or can claim rewards.
 
