@@ -2,7 +2,7 @@
 
 I used Apache Maven for this case study. 
 Organized the solution as: Controllers, Services, Repositories and Models.
-lombok builder is used for models also "Scheduled cron" to manage the tournament opening and closing times.
+lombok builder is used for models also "Scheduled cron" is used to manage the tournament opening and closing times.
 __________
 
 I've added an extra field to User table (pendingCoins) to keep track if the user can enter a tournament or not.
