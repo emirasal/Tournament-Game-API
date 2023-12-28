@@ -3,6 +3,7 @@ package com.dreamgamescasestudy.rest.service;
 import com.dreamgamescasestudy.rest.domain.*;
 import com.dreamgamescasestudy.rest.domain.TournamentUserScore;
 import com.dreamgamescasestudy.rest.repository.*;
+import com.dreamgamescasestudy.rest.web.ErrorMessage;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.Getter;
@@ -31,9 +32,7 @@ public class TournamentService {
     Tournament currentTournament;
     private Queue<User> userQueue; // For matching the users to a group
 
-
     @Scheduled(cron = "0 0 0 * * *", zone = "UTC") // Daily at 00:00 (UTC)
-    @PostConstruct
     public void startNewTournament() {
         currentTournament = Tournament.builder().build();
         tournamentRepository.save(currentTournament);
@@ -43,8 +42,6 @@ public class TournamentService {
 
     @Scheduled(cron = "0 0 20 * * ?") // Daily at 20:00 (UTC)
     public void closeTournament() {
-        // Distributing coins to winners
-
         // Finding all the groups of this tournament
         List<TournamentGroup> groups = tournamentGroupRepository.findByTournament(currentTournament);
 
@@ -74,8 +71,9 @@ public class TournamentService {
     }
 
     private void formGroups(){
+        // Everytime this method is called we check the queue for 5 unique users.
         if (userQueue.size() >= 5) {
-            Map<Country, User> countryUserMap = new HashMap<>(); // To store the unique Country / User pairs
+            Map<Country, User> countryUserMap = new HashMap<>(); // To store the unique Country & User pairs
 
             for (User  currentUser : userQueue){
                 if (countryUserMap.size() >= 5) {
@@ -97,7 +95,7 @@ public class TournamentService {
 
                     userQueue.remove(user);
 
-                    // We also add this person's country added to country scores
+                    // We also add this person's country to country scores
                     TournamentCountryScore newCountryInstance = TournamentCountryScore.builder().country(user.getCountry()).tournament(currentTournament).build();
                     tournamentCountryScoreRepository.save(newCountryInstance);
                 }
@@ -124,26 +122,28 @@ public class TournamentService {
         return null;
     }
 
-    public void enterTournament(Long userID) {
+    public ErrorMessage enterTournament(Long userID) {
 
         Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
 
-            if (user.getPendingCoins() == 0) {
-                /*
-                if (user.getCoins() >= 1000) {
-                user.getLevel() >= 20
-                }
-                user.setCoins(user.getCoins() - 1000); */
+            // Input checks
+            if (user.getLevel() < 20) {return ErrorMessage.NOT_ENOUGH_LEVEL;}
+            else if (user.getCoins() < 1000) {return ErrorMessage.NOT_ENOUGH_COINS;}
+            else if (user.getPendingCoins() > 0) {return ErrorMessage.PENDING_COINS_EXIST;}
 
-                userQueue.offer(user);
-                formGroups();
+            user.setCoins(user.getCoins() - 1000);
 
-                // Leaderboard will be returned from the checkGroupLeaderboard method
-            }
+            userQueue.offer(user);
+            formGroups();
+
+            return ErrorMessage.OK;
+            // Leaderboard will be returned from the checkGroupLeaderboard method
         }
+        // No such user
+        return ErrorMessage.USER_DOES_NOT_EXIST;
     }
 
     public int getGroupRank(Long userID, Long tournamentID){
@@ -179,7 +179,7 @@ public class TournamentService {
             }
             return rank;
         }
-        // tournamentID or userID is not valid
+        // parameters are not valid
        return -1;
     }
     
@@ -217,7 +217,7 @@ public class TournamentService {
         return null;
     }
 
-    public void updateTournamentScore(long userID){
+    public int updateTournamentScore(long userID){
         Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
@@ -236,6 +236,10 @@ public class TournamentService {
             TournamentCountryScore tournamentCountryScoreInstance = tournamentCountryScoreRepository.findByTournamentAndCountry(currentTournament, user.getCountry());
             tournamentCountryScoreInstance.setScore(tournamentCountryScoreInstance.getScore() + 1);
             tournamentCountryScoreRepository.save(tournamentCountryScoreInstance);
+
+            return tournamentUserScoreInstance.getScore();
         }
+        // Invalid userID
+        return -1;
     }
 }

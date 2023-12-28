@@ -1,7 +1,6 @@
 package com.dreamgamescasestudy.rest.service;
 
 import com.dreamgamescasestudy.rest.repository.UserRepository;
-import com.dreamgamescasestudy.rest.domain.Country;
 import com.dreamgamescasestudy.rest.domain.User;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,7 @@ public class UserService {
         return null;
     }
 
-    public User ClaimTournamentReward(Long userID) {
+    public User claimTournamentReward(Long userID) {
         Optional<User> optionalUser = userRepository.findById(userID);
 
         if (optionalUser.isPresent()) {
@@ -42,11 +41,9 @@ public class UserService {
             user.setCoins(user.getCoins() + user.getPendingCoins());
             user.setPendingCoins(0);
 
-            userRepository.save(user);
+            return userRepository.save(user);
         }
         // User does not exist!
         return null;
     }
-
-
 }

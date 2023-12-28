@@ -24,47 +24,56 @@ class UserServiceTest {
 
     @Test
     void testCreateUser() {
-        // Given
         String username = "testUser";
         User expectedUser = User.builder().username(username).build();
 
-        // Mocking userRepository.save() behavior
         when(userRepository.save(any(User.class))).thenReturn(expectedUser);
 
         // When
         User createdUser = userService.createUser(username);
 
         // Then
-        verify(userRepository, times(1)).save(any(User.class)); // Verifying that userRepository.save() was called
-        assertEquals(expectedUser, createdUser); // Verifying that the createdUser matches the expectedUser
-        assertEquals(username, createdUser.getUsername()); // Verifying specific attributes of the created user
+        verify(userRepository, times(1)).save(any(User.class));
+        assertEquals(expectedUser, createdUser);
+        assertEquals(username, createdUser.getUsername());
     }
 
     @Test
     void testUpdateUserLevel() {
-        // Given
         User existingUser = User.builder().userID(1L).level(1).build();
         Optional<User> optionalUser = Optional.of(existingUser);
 
-        // Mocking userRepository.findById() behavior
         when(userRepository.findById(1L)).thenReturn(optionalUser);
 
-        // Mocking userRepository.save() behavior
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            return invocation.<User>getArgument(0);
-        });
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When
         User updatedUser = userService.updateUserLevel(1L);
 
         // Then
-        verify(userRepository, times(1)).findById(1L); // Verifying that userRepository.findById() was called
-        verify(userRepository, times(1)).save(existingUser); // Verifying that userRepository.save() was called
+        verify(userRepository, times(1)).findById(1L);
+        verify(userRepository, times(1)).save(existingUser);
 
-        assertNotNull(updatedUser); // Verifying that the updatedUser is not null
-        assertEquals(existingUser.getLevel() , updatedUser.getLevel()); // Verifying that the level is incremented
+        assertNotNull(updatedUser);
+        assertEquals(existingUser.getLevel() , updatedUser.getLevel());
+    }
 
+    @Test
+    void testClaimTournamentReward() {
+        long userId = 1L;
+        User existingUser = User.builder().userID(userId).coins(100).pendingCoins(50).build();
+        Optional<User> optionalUser = Optional.of(existingUser);
+
+        when(userRepository.findById(userId)).thenReturn(optionalUser);
+        when(userRepository.save(any(User.class))).thenReturn(existingUser);
+
+        // When
+        User claimedUser = userService.claimTournamentReward(userId);
+
+        // Then
+        assertEquals(150, claimedUser.getCoins());
+        assertEquals(0, claimedUser.getPendingCoins());
+        verify(userRepository, times(1)).findById(userId);
+        verify(userRepository, times(1)).save(existingUser);
     }
 }
-
-

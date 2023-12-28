@@ -7,6 +7,8 @@ import com.dreamgamescasestudy.rest.service.TournamentService;
 import com.dreamgamescasestudy.rest.web.response.CountryLeaderboardResponse;
 import com.dreamgamescasestudy.rest.web.response.GroupLeaderboardResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -20,10 +22,24 @@ public class TournamentController {
     private final TournamentService tournamentService;
 
     @PostMapping("/enter-tournament")
-    public List<GroupLeaderboardResponse> EnterTournamentRequest(@RequestParam Long userID) throws InterruptedException {
+    public ResponseEntity<?> EnterTournamentRequest(@RequestParam Long userID) throws InterruptedException {
 
-        tournamentService.enterTournament(userID);
+        // Will put the user in queue
+        ErrorMessage message = tournamentService.enterTournament(userID);
 
+        String errorMessage = switch (message) {
+            case USER_DOES_NOT_EXIST -> "No such user";
+            case NOT_ENOUGH_LEVEL -> "Not enough level";
+            case PENDING_COINS_EXIST -> "Claim the previous rewards before entering";
+            case NOT_ENOUGH_COINS -> "You must have at least 1000 coins";
+            case OK -> null;
+        };
+
+        if (message != ErrorMessage.OK) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
+        }
+
+        // Everything is fine
         List<TournamentUserScore> userScores = tournamentService.getUserScoresWithUserId(userID);
         // keep checking until user is matched with a group
         while (userScores == null) {
@@ -31,42 +47,56 @@ public class TournamentController {
             userScores = tournamentService.getUserScoresWithUserId(userID);
         }
 
-        return UserScoresDataToResponse(userScores);
+        return ResponseEntity.ok(UserScoresDataToResponse(userScores));
     }
 
     @GetMapping("/get-rank")
-    public int GetGroupRankRequest(@RequestParam Long userID, @RequestParam Long tournamentID) {
+    public ResponseEntity<?> getGroupRankRequest(@RequestParam Long userID, @RequestParam Long tournamentID) {
+        int rank = tournamentService.getGroupRank(userID, tournamentID);
+        if (rank == -1) {
+            String errorMessage = "Failed to retrieve rank for userID: " + userID + " in tournamentID: " + tournamentID;
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
 
-        return tournamentService.getGroupRank(userID, tournamentID);
+        }
+        return ResponseEntity.ok(rank);
     }
 
     @GetMapping("/group-leaderboard")
-    public List<GroupLeaderboardResponse> GetGroupLeaderboardRequest(@RequestParam Long groupID){
+    public ResponseEntity<?> getGroupLeaderboardRequest(@RequestParam Long groupID) {
+        List<TournamentUserScore> leaderboard = tournamentService.getGroupLeaderboard(groupID);
+        if (leaderboard == null) {
+            String errorMessage = "No leaderboard data available for groupID: " + groupID;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage);
+        }
 
-        List<TournamentUserScore> leaderboard =  tournamentService.getGroupLeaderboard((groupID));
-
-        // Putting data into response class using custom function
-        return UserScoresDataToResponse(leaderboard);
+        List<GroupLeaderboardResponse> response = UserScoresDataToResponse(leaderboard);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/country-leaderboard")
-    public List<CountryLeaderboardResponse> GetCountryLeaderboardRequest(@RequestParam Long tournamentID){
-
+    public ResponseEntity<?> getCountryLeaderboardRequest(@RequestParam Long tournamentID) {
         List<TournamentCountryScore> leaderboard = tournamentService.getCountryLeaderboard(tournamentID);
+        if (leaderboard == null || leaderboard.isEmpty()) {
+            String errorMessage = "No leaderboard data available for tournamentID: " + tournamentID;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorMessage);
+        }
 
-        // Putting data into response class
         List<CountryLeaderboardResponse> response = new ArrayList<>();
         for (TournamentCountryScore instance : leaderboard){
             CountryLeaderboardResponse newElement = new CountryLeaderboardResponse(instance.getCountry(), instance.getScore());
             response.add(newElement);
         }
 
-        return response;
+        return ResponseEntity.ok(response);
     }
-
     @PutMapping("/update-tournament-score")
-    public void UpdateTournamentScore(@RequestParam Long userID){
-        tournamentService.updateTournamentScore(userID);
+    public ResponseEntity<?> updateTournamentScore(@RequestParam Long userID) {
+        int score = tournamentService.updateTournamentScore(userID);
+        if (score == -1) {
+            String errorMessage = "Failed to update tournament score for userID: " + userID;
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMessage);
+        }
+        return ResponseEntity.ok(score);
     }
 
 
@@ -79,5 +109,4 @@ public class TournamentController {
         }
         return response;
     }
-
 }

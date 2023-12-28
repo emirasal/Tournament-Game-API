@@ -31,7 +31,8 @@ public class User {
     private Country country = Country.getRandomCountry();
 
     @Column
-    private int pendingCoins;
+    @Builder.Default
+    private int pendingCoins = 0;
 
 
     public void updateFieldsForNewLevel(){
