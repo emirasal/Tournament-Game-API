@@ -7,7 +7,8 @@ __________
 
 I've added an extra field to User table (pendingCoins) to keep track if the user can enter a tournament or not.
 
-When player enters a tournament. They're added to a queue and start searching for other people from different countries. To check if they've found a group, a loop is running every 2 seconds and looking at the database.
+When player enters a tournament. They're added to a queue and start searching for other people from different countries. To check if they've found a group, a loop is running every 2 seconds and looking at the database. (When queue has 5 unique country users, group is formed 
+automatically and users are added to the database)
 
 To sort the user or country scores for displaying the leaderboard. I used the Comparator class to create a custom sorting for class variable (userScore).
 
