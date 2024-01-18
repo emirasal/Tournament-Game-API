@@ -1,5 +1,7 @@
-# DreamGames-CaseStudy (Backend)
+# DreamGames Backend CaseStudy
 
+This project is developed using Java Spring and integrated with a MySQL database. This API serves as the engine driving the game's mechanics. It features a leveling up system, a coin system for in-game currency management, a daily tournament system for organized competitions, and a rewards system to recognize player achievements.
+__________
 I used Apache Maven for this case study. 
 Organized the solution as: Controllers, Services, Repositories and Models.
 lombok builder is used for models also "Scheduled cron" is used to manage the tournament opening and closing times.
