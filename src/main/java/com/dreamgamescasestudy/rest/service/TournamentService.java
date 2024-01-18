@@ -38,6 +38,11 @@ public class TournamentService {
         tournamentRepository.save(currentTournament);
 
         userQueue = new LinkedList<>();
+
+        // We also create the country score instances for each country
+        for (Country country : Country.values()) {
+            tournamentCountryScoreRepository.save(TournamentCountryScore.builder().country(country).tournament(currentTournament).build());
+        }
     }
 
     @Scheduled(cron = "0 0 20 * * ?") // Daily at 20:00 (UTC)
@@ -94,10 +99,6 @@ public class TournamentService {
                     tournamentUserScoreRepository.save(newParticipant);
 
                     userQueue.remove(user);
-
-                    // We also add this person's country to country scores
-                    TournamentCountryScore newCountryInstance = TournamentCountryScore.builder().country(user.getCountry()).tournament(currentTournament).build();
-                    tournamentCountryScoreRepository.save(newCountryInstance);
                 }
             }
         }
