@@ -1,4 +1,4 @@
-# DreamGames Backend CaseStudy
+# Summary
 
 This project is developed using Java Spring and integrated with a MySQL database. This API serves as the engine driving the game's mechanics. It features a leveling up system, a coin system for in-game currency management, a daily tournament system for organized competitions, and a rewards system to recognize player achievements.
 __________
